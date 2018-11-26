@@ -1,0 +1,37 @@
+{
+  "name": "appwebrtc",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node node_modules/react-native/local-cli/cli.js start",
+    "st:re:ca": "npm start -- --reset-cache",
+    "link": "react-native link",
+    "clear:watchman": "watchman watch-del-all",
+    "clear:modules": "rm -rf node_modules",
+    "clear:all": "npm run clear:watchman && npm run clear:modules && npm install",
+    "emulator:nexus6": "/home/stephane/Android/Sdk/tools/emulator -avd Nexus_6_API_26",
+    "shell:huawai": "adb -s UBV7N18507000558 shell",
+    "shell:samsung": "adb -s 5203eeffe2a854bd shell",
+    "android": "react-native run-android",
+    "android:setup": "cp ./android/local.properties.dist ./android/local.properties",
+    "android:clean": "cd android && ./gradlew clean",
+    "android:log": "react-native log-android",
+    "android:menu": "adb shell input keyevent 82",
+    "test": "jest"
+  },
+  "dependencies": {
+    "react": "16.6.1",
+    "react-native": "0.57.5",
+    "react-native-webrtc": "^1.67.1",
+    "react-navigation": "^3.0.0"
+  },
+  "devDependencies": {
+    "babel-jest": "23.6.0",
+    "jest": "23.6.0",
+    "metro-react-native-babel-preset": "0.49.2",
+    "react-test-renderer": "16.6.1"
+  },
+  "jest": {
+    "preset": "react-native"
+  }
+}
