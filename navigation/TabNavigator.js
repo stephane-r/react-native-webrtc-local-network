@@ -1,4 +1,4 @@
-// import React from 'react';
+import React from 'react';
 // import { Platform, StatusBar } from 'react-native';
 import {
   createStackNavigator,
@@ -12,9 +12,9 @@ const HomeStack = createStackNavigator({
 });
 
 HomeStack.navigationOptions = {
-  tabBarLabel: 'Emitter'
+  tabBarLabel: 'Home'
 };
 
 export default createMaterialTopTabNavigator({
-  HomeScreen
+  HomeStack
 });

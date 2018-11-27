@@ -3,8 +3,6 @@ import { createSwitchNavigator } from 'react-navigation';
 
 import MainTabNavigator from './TabNavigator';
 
-const SwitchNavigator = createSwitchNavigator({
+export default createSwitchNavigator({
   Main: MainTabNavigator
 });
-
-export default SwitchNavigator;

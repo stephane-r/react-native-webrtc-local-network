@@ -10,6 +10,7 @@
     "clear:modules": "rm -rf node_modules",
     "clear:all": "npm run clear:watchman && npm run clear:modules && npm install",
     "emulator:nexus6": "/home/stephane/Android/Sdk/tools/emulator -avd Nexus_6_API_26",
+    "list:device": "/home/stephane/Android/Sdk/tools/emulator -list-avds",
     "shell:huawai": "adb -s UBV7N18507000558 shell",
     "shell:samsung": "adb -s 5203eeffe2a854bd shell",
     "android": "react-native run-android",
@@ -24,7 +25,8 @@
     "react-native": "0.57.5",
     "react-native-device-info": "^0.24.3",
     "react-native-webrtc": "^1.67.1",
-    "react-navigation": "^3.0.0"
+    "react-native-webview": "^2.13.0",
+    "react-navigation": "2.17.0"
   },
   "devDependencies": {
     "babel-jest": "23.6.0",
