@@ -1,12 +1,300 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" prefix="og: http://ogp.me/ns#">
   <head>
-    <meta charset="UTF-8" />
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <title>Document</title>
+
+    <title>- Sunaero</title>
+
+    <meta name="description" content="" />
+
+    <link rel="manifest" href="/manifest.json?webrtcType=audio-video" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="Sunaero WingsUp" />
+
+    <meta property="og:site_name" content="Sunaero" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content=" - Sunaero" />
+    <meta property="og:description" content="" />
+    <meta
+      property="og:url"
+      content="https://sunaero-wise.staging.novaway.net/webrtc/audio-video"
+    />
+    <meta property="og:image" content="/og-image.jpg?v=117" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content=" - Sunaero" />
+    <meta name="twitter:description" content="" />
+    <meta name="twitter:image" content="/og-image.jpg?v=117" />
+    <meta name="twitter:image:alt" content="" />
+
+    <meta name="theme-color" content="#ffffff" />
   </head>
-  <body>
-    <h1>This is index.html file !</h1>
+  <body class="">
+    <header class="l-header align-center hide-for-large">
+      <div class="block-grid small-shrink small-right">
+        <a class="l-header-button icon-menu" data-toggle="js-off-canvas"
+          ><span class="show-for-sr">Afficher la navigation</span></a
+        >
+      </div>
+    </header>
+
+    <aside class="l-aside show-for-large "></aside>
+
+    <aside
+      id="js-off-canvas"
+      class="off-canvas position-right"
+      data-off-canvas
+    ></aside>
+
+    <main class="">
+      <div class="l-main ">
+        <div class="webrtc audio-video">
+          <div class="block-grid block-white">
+            <div class="column small-12"><h2>WebRTC (audio-video)</h2></div>
+            <div class="column small-6">
+              Status:
+              <span id="connection-status" style="color:red;"
+                >not connected</span
+              >
+              <br /><br />
+              <button class="button" id="localOfferSet">Generate offer</button>
+              <textarea></textarea> <br />
+              Offer:
+              <input type="file" id="remoteOfferFile" name="remoteOfferFile" />
+              <br /><br />
+              <button class="button" id="remoteOfferGot">
+                Generate response
+              </button>
+              <textarea></textarea> <br />
+              <br /><br />
+            </div>
+
+            <div class="column small-12"><h2>Streams</h2></div>
+            <div class="column small-12">
+              <video height="100" id="local" controls autoplay></video>
+              <video width="250" id="remote" controls autoplay></video>
+            </div>
+          </div>
+
+          <div class="block-grid block-grey">
+            <div class="column small-12">
+              <h2>Chat</h2>
+              <form id="text-chat">
+                <input id="sendTxt" type="text" placeholder="chat here" />
+                <button class="button" type="submit">send</button>
+              </form>
+              <br />
+              <div id="chat"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script
+      src="https://code.jquery.com/jquery-3.3.1.min.js"
+      integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+      crossorigin="anonymous"
+    ></script>
+    <script>
+      if ($('.webrtc').length) {
+        let conf = { iceServers: [{ urls: [] }] };
+        let pc = new RTCPeerConnection(conf);
+        let localStream,
+          _fileChannel,
+          context,
+          source,
+          _chatChannel,
+          sendFileDom = {},
+          recFileDom = {},
+          receiveBuffer = [],
+          receivedSize = 0,
+          file,
+          bytesPrev = 0;
+
+        function errHandler(err) {
+          console.log(err);
+        }
+
+        let mediaOptions = { audio: true, video: true };
+
+        if ($('.webrtc').hasClass('video-only')) {
+          mediaOptions.audio = false;
+        } else if ($('.webrtc').hasClass('audio-only')) {
+          mediaOptions.video = false;
+        }
+
+        console.log(mediaOptions);
+
+        navigator.mediaDevices.getUserMedia(mediaOptions).then(stream => {
+          localStream = stream;
+          pc.addStream(stream);
+          local.src = URL.createObjectURL(stream);
+          local.muted = true;
+        });
+
+        $('#text-chat').on('submit', function(e) {
+          e.preventDefault();
+
+          let text = $('#sendTxt').val();
+          chat.innerHTML =
+            chat.innerHTML + '<pre class=sent>' + text + '</pre>';
+          _chatChannel.send(text);
+          $('#sendTxt').val('');
+        });
+
+        pc.ondatachannel = function(e) {
+          if (e.channel.label === 'fileChannel') {
+            console.log('fileChannel Received -', e);
+            _fileChannel = e.channel;
+            fileChannel(e.channel);
+          }
+          if (e.channel.label === 'chatChannel') {
+            console.log('chatChannel Received -', e);
+            _chatChannel = e.channel;
+            chatChannel(e.channel);
+          }
+        };
+
+        pc.onicecandidate = function(e) {
+          let cand = e.candidate;
+          if (!cand) {
+            console.log('iceGatheringState complete', pc.localDescription.sdp);
+
+            download(
+              'webrtc-offer.' + Date.now() + '.txt',
+              JSON.stringify(pc.localDescription)
+            );
+          } else {
+            console.log(cand.candidate);
+          }
+        };
+        pc.oniceconnectionstatechange = function() {
+          console.log('iceconnectionstatechange: ', pc.iceConnectionState);
+
+          if (pc.iceConnectionState === 'connected') {
+            $('#connection-status')
+              .css('color', 'green')
+              .text('connected');
+          }
+        };
+        pc.onaddstream = function(e) {
+          console.log('remote onaddstream', e.stream);
+          remote.src = URL.createObjectURL(e.stream);
+        };
+        pc.onconnection = function(e) {
+          console.log('onconnection ', e);
+        };
+
+        $('#remoteOfferGot').on('click', function() {
+          readFileAsText('remoteOfferFile').then(data => {
+            let _remoteOffer = new RTCSessionDescription(JSON.parse(data));
+            console.log('remoteOffer \n', _remoteOffer);
+            pc.setRemoteDescription(_remoteOffer)
+              .then(function() {
+                console.log('setRemoteDescription ok');
+                if (_remoteOffer.type === 'offer') {
+                  pc.createAnswer()
+                    .then(function(description) {
+                      console.log('createAnswer 200 ok \n', description);
+                      pc.setLocalDescription(description)
+                        .then(description => {})
+                        .catch(errHandler);
+                    })
+                    .catch(errHandler);
+                }
+              })
+              .catch(errHandler);
+          });
+        });
+
+        function download(filename, text) {
+          let element = document.createElement('a');
+          element.setAttribute(
+            'href',
+            'data:text/plain;charset=utf-8,' + encodeURIComponent(text)
+          );
+          element.setAttribute('download', filename);
+
+          element.style.display = 'none';
+          document.body.appendChild(element);
+
+          element.click();
+
+          document.body.removeChild(element);
+        }
+
+        function readFileAsText(inputId) {
+          console.log(inputId);
+          let selectedFile = document.getElementById(inputId).files[0];
+
+          return new Promise((resolve, reject) => {
+            let fr = new FileReader();
+            fr.onload = () => {
+              resolve(fr.result);
+            };
+            fr.readAsText(selectedFile);
+          });
+        }
+
+        $('#localOfferSet').on('click', function() {
+          _chatChannel = pc.createDataChannel('chatChannel');
+          chatChannel(_chatChannel);
+
+          pc.createOffer()
+            .then(des => {
+              console.log('createOffer ok ');
+              pc.setLocalDescription(des)
+                .then(() => {
+                  console.log('here');
+                  console.log(pc);
+                  setTimeout(function() {
+                    if (pc.iceGatheringState === 'complete') {
+                      return;
+                    } else {
+                      console.log('after GetherTimeout');
+                      $('#localOffer').val(JSON.stringify(pc.localDescription));
+                    }
+                  }, 2000);
+                  console.log('setLocalDescription ok');
+                })
+                .catch(errHandler);
+              // For chat
+            })
+            .catch(errHandler);
+        });
+
+        function chatChannel(e) {
+          _chatChannel.onopen = function(e) {
+            console.log('chat channel is open', e);
+          };
+          _chatChannel.onmessage = function(e) {
+            chat.innerHTML = chat.innerHTML + '<pre>' + e.data + '</pre>';
+          };
+          _chatChannel.onclose = function() {
+            console.log('chat channel closed');
+          };
+        }
+
+        function Stats() {
+          pc.getStats(null, function(stats) {
+            for (let key in stats) {
+              let res = stats[key];
+              console.log(res.type, res.googActiveConnection);
+              if (
+                res.type === 'googCandidatePair' &&
+                res.googActiveConnection === 'true'
+              ) {
+                // calculate current bitrate
+                let bytesNow = res.bytesReceived;
+                console.log('bit rate', bytesNow - bytesPrev);
+                bytesPrev = bytesNow;
+              }
+            }
+          });
+        }
+      }
+    </script>
   </body>
 </html>
