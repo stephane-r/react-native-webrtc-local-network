@@ -18,7 +18,7 @@ const initialState = {
   answerCreated: false,
   answerImported: false,
   connectionState: null,
-  initiator: true,
+  initiator: false,
   videoURL: null,
   offer: null,
   data: null,
@@ -199,10 +199,10 @@ class HomeScreen extends React.Component {
    * @memberof HomeScreen
    */
   @autobind
-  async start(initiator = true) {
-    if (!initiator) {
+  async start(initiator = this.state.initiator) {
+    if (initiator) {
       await this.setState({
-        initiator: false
+        initiator: true
       });
     }
 
@@ -233,6 +233,7 @@ class HomeScreen extends React.Component {
           )}
           <ConnectionState text={connectionState} />
           <View style={{ flexDirection: 'row', flexWrap: 'nowrap' }}>
+            <Status text="Initiator" isTrue={initiator} />
             <Status text="Peer created" isTrue={peerCreated} />
             <Status text="Offer created" isTrue={offerCreated} />
             <Status text="Offer imported" isTrue={offerImported} />
@@ -250,7 +251,7 @@ class HomeScreen extends React.Component {
         <View style={styles.container}>
           <WebRTCView
             title="Create offer"
-            onPress={() => this.start()}
+            onPress={() => this.start(true)}
             disabled={false}
             placeholder="Offer"
             onChangeText={value => this.setState({ data: value })}
@@ -259,7 +260,7 @@ class HomeScreen extends React.Component {
           />
           <WebRTCView
             title="Create Answer"
-            onPress={() => this.start(false)}
+            onPress={() => this.start()}
             disabled={data === null}
             placeholder="Paste initiator offer"
             onChangeText={value => this.setState({ data: value })}
