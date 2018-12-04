@@ -8,7 +8,7 @@
     "link": "react-native link",
     "clear:watchman": "watchman watch-del-all",
     "clear:modules": "rm -rf node_modules",
-    "clear:all": "npm run clear:watchman && npm run clear:modules && npm install",
+    "clear:all": "npm run clear:watchman && npm run clear:modules && yarn",
     "emulator:nexus6": "/home/stephane/Android/Sdk/tools/emulator -avd Nexus_6_API_26",
     "list:device": "/home/stephane/Android/Sdk/tools/emulator -list-avds",
     "shell:huawai": "adb -s UBV7N18507000558 shell",
