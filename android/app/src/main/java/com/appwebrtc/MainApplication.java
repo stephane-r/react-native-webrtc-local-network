@@ -3,6 +3,7 @@ package com.appwebrtc;
 import android.app.Application;
 
 import com.facebook.react.ReactApplication;
+import com.peel.react.TcpSocketsModule;
 import com.reactnativecommunity.webview.RNCWebViewPackage;
 import com.oney.WebRTCModule.WebRTCModulePackage;
 import com.learnium.RNDeviceInfo.RNDeviceInfo;
@@ -26,6 +27,7 @@ public class MainApplication extends Application implements ReactApplication {
     protected List<ReactPackage> getPackages() {
       return Arrays.<ReactPackage>asList(
           new MainReactPackage(),
+            new TcpSocketsModule(),
             new RNCWebViewPackage(),
             new WebRTCModulePackage(),
             new RNDeviceInfo()
