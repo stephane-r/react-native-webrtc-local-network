@@ -5,16 +5,26 @@ import {
   createMaterialTopTabNavigator
 } from 'react-navigation';
 
-import HomeScreen from '../screens/Home';
+import InitiatorScreen from '../screens/Initiator';
+import PeerScreen from '../screens/Peer';
 
 const HomeStack = createStackNavigator({
-  Home: HomeScreen
+  Home: InitiatorScreen
+});
+
+const PeerStack = createStackNavigator({
+  Home: PeerScreen
 });
 
 HomeStack.navigationOptions = {
-  tabBarLabel: 'Home'
+  tabBarLabel: 'Initiator'
+};
+
+PeerStack.navigationOptions = {
+  tabBarLabel: 'Peer'
 };
 
 export default createMaterialTopTabNavigator({
   HomeStack
+  // PeerStack
 });

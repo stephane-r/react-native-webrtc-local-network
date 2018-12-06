@@ -18,6 +18,7 @@ const initialState = {
   answerCreated: false,
   answerImported: false,
   connectionState: null,
+  signalingState: null,
   initiator: false,
   videoURL: null,
   offer: null,
@@ -27,7 +28,7 @@ const initialState = {
 
 const configuration = { iceServers: [{ urls: [] }] };
 
-class HomeScreen extends React.Component {
+class InitiatorScreen extends React.Component {
   static navigationOptions = {
     header: null
   };
@@ -48,9 +49,13 @@ class HomeScreen extends React.Component {
       });
     }
 
+    // Doc. : https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/iceConnectionState
     this.setConnectionState();
-
     pc.oniceconnectionstatechange = () => this.setConnectionState();
+
+    // Doc. : https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/signalingState
+    this.setSignalingState();
+    pc.onsignalingstatechange = () => this.setSignalingState();
 
     pc.onaddstream = ({ stream }) => {
       if (stream) {
@@ -84,6 +89,13 @@ class HomeScreen extends React.Component {
   setConnectionState() {
     this.setState({
       connectionState: this.pc.iceConnectionState
+    });
+  }
+
+  @autobind
+  setSignalingState() {
+    this.setState({
+      signalingState: this.pc.signalingState
     });
   }
 
@@ -130,7 +142,7 @@ class HomeScreen extends React.Component {
   /**
    * Create offer
    *
-   * @memberof HomeScreen
+   * @memberof InitiatorScreen
    */
   @autobind
   createOffer() {
@@ -149,7 +161,7 @@ class HomeScreen extends React.Component {
   /**
    * Create anwser
    *
-   * @memberof HomeScreen
+   * @memberof InitiatorScreen
    */
   @autobind
   async createAnswer() {
@@ -159,15 +171,12 @@ class HomeScreen extends React.Component {
     if (data) {
       const sd = new RTCSessionDescription(JSON.parse(data));
 
-      await this.setState({
-        offerImported: true
-      });
-
       pc.setRemoteDescription(sd)
         .then(() => pc.createAnswer())
         .then(answer => pc.setLocalDescription(answer))
         .then(() => {
           this.setState({
+            offerImported: true,
             answerCreated: true
           });
         })
@@ -196,7 +205,7 @@ class HomeScreen extends React.Component {
    *
    * @param {boolean} [initiator=true]
    * @returns
-   * @memberof HomeScreen
+   * @memberof InitiatorScreen
    */
   @autobind
   async start(initiator = this.state.initiator) {
@@ -217,6 +226,7 @@ class HomeScreen extends React.Component {
       videoURL,
       receiverVideoURL,
       connectionState,
+      signalingState,
       error,
       peerCreated,
       offerCreated,
@@ -232,6 +242,7 @@ class HomeScreen extends React.Component {
             <Button title="Import answer" onPress={this.receiveAnswer} />
           )}
           <ConnectionState text={connectionState} />
+          <ConnectionState text={signalingState} />
           <View style={{ flexDirection: 'row', flexWrap: 'nowrap' }}>
             <Status text="Initiator" isTrue={initiator} />
             <Status text="Peer created" isTrue={peerCreated} />
@@ -285,4 +296,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default HomeScreen;
+export default InitiatorScreen;
