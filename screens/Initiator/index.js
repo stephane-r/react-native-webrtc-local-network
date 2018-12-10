@@ -18,6 +18,7 @@ const SERVER_PORT = 60536;
 const SERVER_HOST = '192.168.43.174';
 const clients = [];
 let InitiatorComponent;
+let localStream;
 
 const server = net.createServer(socket => {
   socket.setEncoding('utf8');
@@ -49,6 +50,11 @@ client.on('connect', () => {
   InitiatorComponent.setState({
     clientConnected: true
   });
+
+  getLocalStream(stream => {
+    pc.addStream(stream);
+    InitiatorComponent.setState({ videoURL: stream.toURL() });
+  });
 });
 
 client.on('data', data => {
@@ -57,25 +63,7 @@ client.on('data', data => {
   });
 });
 
-const initialState = {
-  peerCreated: false,
-  offerCreated: false,
-  offerImported: false,
-  answerCreated: false,
-  answerImported: false,
-  connectionState: null,
-  signalingState: null,
-  initiator: false,
-  videoURL: null,
-  offer: null,
-  data: null,
-  error: [],
-  clientConnected: false,
-  ip: false
-};
-
 const configuration = { iceServers: [{ urls: [] }] };
-
 const pc = new RTCPeerConnection(configuration);
 
 pc.oniceconnectionstatechange = () => InitiatorComponent.setConnectionState();
@@ -142,6 +130,36 @@ function receiveAnswer() {
     .catch(InitiatorComponent.logError);
 }
 
+function getLocalStream(callback) {
+  MediaStreamTrack.getSources(() => {
+    getUserMedia(
+      {
+        audio: false,
+        video: true
+      },
+      stream => callback(stream),
+      InitiatorComponent.getUserMediaError
+    );
+  });
+}
+
+const initialState = {
+  peerCreated: false,
+  offerCreated: false,
+  offerImported: false,
+  answerCreated: false,
+  answerImported: false,
+  connectionState: null,
+  signalingState: null,
+  initiator: false,
+  videoURL: null,
+  offer: null,
+  data: null,
+  error: [],
+  clientConnected: false,
+  ip: false
+};
+
 class InitiatorScreen extends React.Component {
   static navigationOptions = {
     header: null
@@ -181,32 +199,6 @@ class InitiatorScreen extends React.Component {
     });
   }
 
-  getUserMedia() {
-    MediaStreamTrack.getSources(() => {
-      getUserMedia(
-        {
-          audio: false,
-          video: true
-        },
-        this.getUserMediaSuccess,
-        this.getUserMediaError
-      );
-    });
-  }
-
-  @autobind
-  async getUserMediaSuccess(stream) {
-    pc.addStream(stream);
-
-    await this.setState({ videoURL: stream.toURL() });
-
-    if (this.state.initiator) {
-      return createOffer();
-    }
-
-    return createAnswer();
-  }
-
   getUserMediaError(error) {
     console.log(error);
   }
@@ -232,9 +224,11 @@ class InitiatorScreen extends React.Component {
       await this.setState({
         initiator: true
       });
+
+      return createOffer();
     }
 
-    return this.getUserMedia();
+    return createAnswer();
   }
 
   render() {
