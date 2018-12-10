@@ -78,6 +78,70 @@ const configuration = { iceServers: [{ urls: [] }] };
 
 const pc = new RTCPeerConnection(configuration);
 
+pc.oniceconnectionstatechange = () => InitiatorComponent.setConnectionState();
+pc.onsignalingstatechange = () => InitiatorComponent.setSignalingState();
+pc.onaddstream = ({ stream }) => {
+  InitiatorComponent.setState({
+    receiverVideoURL: stream.toURL()
+  });
+};
+pc.onicecandidate = async ({ candidate }) => {
+  if (candidate === null) {
+    const { offer } = InitiatorComponent.state;
+    const field = !offer ? 'offer' : 'data';
+
+    await InitiatorComponent.setState({
+      [field]: JSON.stringify(pc.localDescription)
+    });
+
+    client.write(JSON.stringify(pc.localDescription));
+  }
+};
+
+function createOffer() {
+  pc.createOffer()
+    .then(offer => pc.setLocalDescription(offer))
+    .then(async () => {
+      await InitiatorComponent.setState({
+        offerCreated: true
+      });
+    })
+    .catch(InitiatorComponent.logError);
+}
+
+function createAnswer() {
+  const { data } = InitiatorComponent.state;
+
+  if (data) {
+    const sd = new RTCSessionDescription(JSON.parse(data));
+
+    pc.setRemoteDescription(sd)
+      .then(() => pc.createAnswer())
+      .then(answer => pc.setLocalDescription(answer))
+      .then(async () => {
+        await InitiatorComponent.setState({
+          offerImported: true,
+          answerCreated: true
+        });
+      })
+      .catch(InitiatorComponent.logError);
+  }
+}
+
+function receiveAnswer() {
+  const { data } = InitiatorComponent.state;
+  const sd = new RTCSessionDescription(JSON.parse(data));
+
+  return pc
+    .setRemoteDescription(sd)
+    .then(() => {
+      InitiatorComponent.setState({
+        answerImported: true
+      });
+    })
+    .catch(InitiatorComponent.logError);
+}
+
 class InitiatorScreen extends React.Component {
   static navigationOptions = {
     header: null
@@ -86,10 +150,7 @@ class InitiatorScreen extends React.Component {
   state = initialState;
 
   componentDidMount() {
-    DeviceInfo.getIPAddress().then(ip => {
-      this.setState({ ip });
-      alert(ip);
-    });
+    DeviceInfo.getIPAddress().then(ip => this.setState({ ip }));
 
     InitiatorComponent = this;
 
@@ -101,36 +162,9 @@ class InitiatorScreen extends React.Component {
 
     // Doc. : https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/iceConnectionState
     this.setConnectionState();
-    pc.oniceconnectionstatechange = () => this.setConnectionState();
 
     // Doc. : https://developer.mozilla.org/en-US/docs/Web/API/RTCPeerConnection/signalingState
     this.setSignalingState();
-    pc.onsignalingstatechange = () => this.setSignalingState();
-
-    pc.onaddstream = ({ stream }) => {
-      this.setState({
-        receiverVideoURL: stream.toURL()
-      });
-    };
-
-    pc.onnegotiationneeded = () => {
-      if (this.state.initiator) {
-        this.createOffer();
-      }
-    };
-
-    pc.onicecandidate = async ({ candidate }) => {
-      if (candidate === null) {
-        const { offer } = this.state;
-        const field = !offer ? 'offer' : 'data';
-
-        await this.setState({
-          [field]: JSON.stringify(pc.localDescription)
-        });
-
-        client.write(JSON.stringify(pc.localDescription));
-      }
-    };
   }
 
   @autobind
@@ -167,10 +201,10 @@ class InitiatorScreen extends React.Component {
     await this.setState({ videoURL: stream.toURL() });
 
     if (this.state.initiator) {
-      return this.createOffer();
+      return createOffer();
     }
 
-    return this.createAnswer();
+    return createAnswer();
   }
 
   getUserMediaError(error) {
@@ -183,63 +217,6 @@ class InitiatorScreen extends React.Component {
     return this.setState({
       error: errorArray
     });
-  }
-
-  /**
-   * Create offer
-   *
-   * @memberof InitiatorScreen
-   */
-  @autobind
-  createOffer() {
-    pc.createOffer()
-      .then(offer => pc.setLocalDescription(offer))
-      .then(async () => {
-        await this.setState({
-          offerCreated: true
-        });
-      })
-      .catch(this.logError);
-  }
-
-  /**
-   * Create anwser
-   *
-   * @memberof InitiatorScreen
-   */
-  @autobind
-  async createAnswer() {
-    const { data } = this.state;
-
-    if (data) {
-      const sd = new RTCSessionDescription(JSON.parse(data));
-
-      pc.setRemoteDescription(sd)
-        .then(() => pc.createAnswer())
-        .then(answer => pc.setLocalDescription(answer))
-        .then(async () => {
-          await this.setState({
-            offerImported: true,
-            answerCreated: true
-          });
-        })
-        .catch(this.logError);
-    }
-  }
-
-  @autobind
-  receiveAnswer() {
-    const { data } = this.state;
-    const sd = new RTCSessionDescription(JSON.parse(data));
-
-    return pc
-      .setRemoteDescription(sd)
-      .then(() => {
-        this.setState({
-          answerImported: true
-        });
-      })
-      .catch(this.logError);
   }
 
   /**
@@ -283,7 +260,7 @@ class InitiatorScreen extends React.Component {
       <View style={{ flex: 1 }}>
         <View style={styles.header}>
           {data && initiator && (
-            <Button title="Import answer" onPress={this.receiveAnswer} />
+            <Button title="Import answer" onPress={receiveAnswer} />
           )}
           <ConnectionState text={connectionState} />
           <ConnectionState text={signalingState} />
