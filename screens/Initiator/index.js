@@ -7,9 +7,54 @@ import {
   MediaStreamTrack,
   getUserMedia
 } from 'react-native-webrtc';
+import net from 'net';
+import DeviceInfo from 'react-native-device-info';
 import ConnectionState from '../../components/ConnectionState';
 import WebRTCView from '../../components/WebRTCView';
 import Status from '../../components/Status';
+
+const SERVER_PORT = 60536;
+const SERVER_HOST = '192.168.10.78';
+const clients = [];
+let InitiatorComponent;
+
+const server = net.createServer(socket => {
+  socket.setEncoding('utf8');
+  socket.name = socket.address().address;
+
+  clients.push(socket);
+
+  socket.on('data', data => {
+    broadcast(data, socket);
+  });
+
+  socket.on('end', () => {
+    clients.splice(clients.indexOf(socket), 1);
+  });
+
+  function broadcast(message, sender) {
+    clients.forEach(client => {
+      if (client === sender) return;
+      client.write(message);
+    });
+  }
+});
+
+server.listen(SERVER_PORT, () => console.log('hello'));
+
+const client = net.createConnection(SERVER_PORT, SERVER_HOST);
+
+client.on('connect', () => {
+  InitiatorComponent.setState({
+    clientConnected: true
+  });
+});
+
+client.on('data', data => {
+  InitiatorComponent.setState({
+    data: data.toString()
+  });
+});
 
 const initialState = {
   peerCreated: false,
@@ -23,7 +68,9 @@ const initialState = {
   videoURL: null,
   offer: null,
   data: null,
-  error: []
+  error: [],
+  clientConnected: false,
+  ip: false
 };
 
 const configuration = { iceServers: [{ urls: [] }] };
@@ -43,6 +90,12 @@ class InitiatorScreen extends React.Component {
   componentDidMount() {
     const { pc } = this;
 
+    DeviceInfo.getIPAddress().then(ip => {
+      this.setState({ ip });
+    });
+
+    InitiatorComponent = this;
+
     if (pc) {
       this.setState({
         peerCreated: true
@@ -58,11 +111,9 @@ class InitiatorScreen extends React.Component {
     pc.onsignalingstatechange = () => this.setSignalingState();
 
     pc.onaddstream = ({ stream }) => {
-      if (stream) {
-        this.setState({
-          receiverVideoURL: stream.toURL()
-        });
-      }
+      this.setState({
+        receiverVideoURL: stream.toURL()
+      });
     };
 
     pc.onnegotiationneeded = () => {
@@ -71,16 +122,16 @@ class InitiatorScreen extends React.Component {
       }
     };
 
-    pc.onicecandidate = ({ candidate }) => {
+    pc.onicecandidate = async ({ candidate }) => {
       if (candidate === null) {
         const { offer } = this.state;
         const field = !offer ? 'offer' : 'data';
 
-        setTimeout(() => {
-          this.setState({
-            [field]: JSON.stringify(pc.localDescription)
-          });
-        }, 2000);
+        await this.setState({
+          [field]: JSON.stringify(pc.localDescription)
+        });
+
+        client.write(JSON.stringify(pc.localDescription));
       }
     };
   }
@@ -150,8 +201,8 @@ class InitiatorScreen extends React.Component {
 
     pc.createOffer()
       .then(offer => pc.setLocalDescription(offer))
-      .then(() => {
-        this.setState({
+      .then(async () => {
+        await this.setState({
           offerCreated: true
         });
       })
@@ -174,8 +225,8 @@ class InitiatorScreen extends React.Component {
       pc.setRemoteDescription(sd)
         .then(() => pc.createAnswer())
         .then(answer => pc.setLocalDescription(answer))
-        .then(() => {
-          this.setState({
+        .then(async () => {
+          await this.setState({
             offerImported: true,
             answerCreated: true
           });
@@ -232,7 +283,9 @@ class InitiatorScreen extends React.Component {
       offerCreated,
       offerImported,
       answerCreated,
-      answerImported
+      answerImported,
+      clientConnected,
+      ip
     } = this.state;
 
     return (
@@ -244,6 +297,8 @@ class InitiatorScreen extends React.Component {
           <ConnectionState text={connectionState} />
           <ConnectionState text={signalingState} />
           <View style={{ flexDirection: 'row', flexWrap: 'nowrap' }}>
+            <Status text="Ip is" isTrue={ip} />
+            <Status text="Client/server" isTrue={clientConnected} />
             <Status text="Initiator" isTrue={initiator} />
             <Status text="Peer created" isTrue={peerCreated} />
             <Status text="Offer created" isTrue={offerCreated} />
@@ -265,7 +320,7 @@ class InitiatorScreen extends React.Component {
             onPress={() => this.start(true)}
             disabled={false}
             placeholder="Offer"
-            onChangeText={value => this.setState({ data: value })}
+            onChangeText={value => console.log(value)}
             value={offer}
             streamURL={videoURL}
           />
@@ -274,7 +329,7 @@ class InitiatorScreen extends React.Component {
             onPress={() => this.start()}
             disabled={data === null}
             placeholder="Paste initiator offer"
-            onChangeText={value => this.setState({ data: value })}
+            onChangeText={value => console.log(value)}
             value={data}
             streamURL={receiverVideoURL}
           />
