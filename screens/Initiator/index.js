@@ -14,7 +14,8 @@ import WebRTCView from '../../components/WebRTCView';
 import Status from '../../components/Status';
 
 const SERVER_PORT = 60536;
-const SERVER_HOST = '192.168.10.78';
+// const SERVER_HOST = '192.168.10.78';
+const SERVER_HOST = '192.168.43.174';
 const clients = [];
 let InitiatorComponent;
 
@@ -75,23 +76,19 @@ const initialState = {
 
 const configuration = { iceServers: [{ urls: [] }] };
 
+const pc = new RTCPeerConnection(configuration);
+
 class InitiatorScreen extends React.Component {
   static navigationOptions = {
     header: null
   };
 
-  constructor(props) {
-    super(props);
-    this.pc = new RTCPeerConnection(configuration);
-  }
-
   state = initialState;
 
   componentDidMount() {
-    const { pc } = this;
-
     DeviceInfo.getIPAddress().then(ip => {
       this.setState({ ip });
+      alert(ip);
     });
 
     InitiatorComponent = this;
@@ -139,14 +136,14 @@ class InitiatorScreen extends React.Component {
   @autobind
   setConnectionState() {
     this.setState({
-      connectionState: this.pc.iceConnectionState
+      connectionState: pc.iceConnectionState
     });
   }
 
   @autobind
   setSignalingState() {
     this.setState({
-      signalingState: this.pc.signalingState
+      signalingState: pc.signalingState
     });
   }
 
@@ -165,8 +162,6 @@ class InitiatorScreen extends React.Component {
 
   @autobind
   async getUserMediaSuccess(stream) {
-    const { pc } = this;
-
     pc.addStream(stream);
 
     await this.setState({ videoURL: stream.toURL() });
@@ -197,8 +192,6 @@ class InitiatorScreen extends React.Component {
    */
   @autobind
   createOffer() {
-    const { pc } = this;
-
     pc.createOffer()
       .then(offer => pc.setLocalDescription(offer))
       .then(async () => {
@@ -216,7 +209,6 @@ class InitiatorScreen extends React.Component {
    */
   @autobind
   async createAnswer() {
-    const { pc } = this;
     const { data } = this.state;
 
     if (data) {
@@ -237,7 +229,6 @@ class InitiatorScreen extends React.Component {
 
   @autobind
   receiveAnswer() {
-    const { pc } = this;
     const { data } = this.state;
     const sd = new RTCSessionDescription(JSON.parse(data));
 
