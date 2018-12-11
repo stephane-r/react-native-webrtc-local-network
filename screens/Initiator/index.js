@@ -18,7 +18,6 @@ const SERVER_PORT = 60536;
 const SERVER_HOST = '192.168.43.174';
 const clients = [];
 let InitiatorComponent;
-let localStream;
 
 const server = net.createServer(socket => {
   socket.setEncoding('utf8');
@@ -97,34 +96,29 @@ function createOffer() {
     .catch(InitiatorComponent.logError);
 }
 
-function createAnswer() {
+function importOffer() {
   const { data } = InitiatorComponent.state;
 
   if (data) {
     const sd = new RTCSessionDescription(JSON.parse(data));
 
     pc.setRemoteDescription(sd)
-      .then(() => pc.createAnswer())
-      .then(answer => pc.setLocalDescription(answer))
-      .then(async () => {
-        await InitiatorComponent.setState({
-          offerImported: true,
-          answerCreated: true
-        });
+      .then(() => {
+        if (sd.type === 'offer') {
+          createAnswer();
+        }
       })
       .catch(InitiatorComponent.logError);
   }
 }
 
-function receiveAnswer() {
-  const { data } = InitiatorComponent.state;
-  const sd = new RTCSessionDescription(JSON.parse(data));
-
-  return pc
-    .setRemoteDescription(sd)
-    .then(() => {
-      InitiatorComponent.setState({
-        answerImported: true
+function createAnswer() {
+  pc.createAnswer()
+    .then(answer => pc.setLocalDescription(answer))
+    .then(async () => {
+      await InitiatorComponent.setState({
+        offerImported: true,
+        answerCreated: true
       });
     })
     .catch(InitiatorComponent.logError);
@@ -228,7 +222,7 @@ class InitiatorScreen extends React.Component {
       return createOffer();
     }
 
-    return createAnswer();
+    return importOffer();
   }
 
   render() {
@@ -254,7 +248,7 @@ class InitiatorScreen extends React.Component {
       <View style={{ flex: 1 }}>
         <View style={styles.header}>
           {data && initiator && (
-            <Button title="Import answer" onPress={receiveAnswer} />
+            <Button title="Import answer" onPress={importOffer} />
           )}
           <ConnectionState text={connectionState} />
           <ConnectionState text={signalingState} />
