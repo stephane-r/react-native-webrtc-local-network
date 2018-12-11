@@ -14,8 +14,8 @@ import WebRTCView from '../../components/WebRTCView';
 import Status from '../../components/Status';
 
 const SERVER_PORT = 60536;
-// const SERVER_HOST = '192.168.10.78';
-const SERVER_HOST = '192.168.43.174';
+const SERVER_HOST = '192.168.10.78';
+// const SERVER_HOST = '192.168.43.174';
 const clients = [];
 let InitiatorComponent;
 
@@ -62,8 +62,8 @@ client.on('data', data => {
   });
 });
 
-const configuration = { iceServers: [{ urls: [] }] };
-const pc = new RTCPeerConnection(configuration);
+// const configuration = { iceServers: [{ urls: [] }] };
+const pc = new RTCPeerConnection(null);
 
 pc.oniceconnectionstatechange = () => InitiatorComponent.setConnectionState();
 pc.onsignalingstatechange = () => InitiatorComponent.setSignalingState();
@@ -213,15 +213,16 @@ class InitiatorScreen extends React.Component {
    * @memberof InitiatorScreen
    */
   @autobind
-  async start(initiator = this.state.initiator) {
+  start(initiator = this.state.initiator) {
     if (initiator) {
-      await this.setState({
+      this.setState({
         initiator: true
       });
 
       return createOffer();
     }
 
+    alert('state');
     return importOffer();
   }
 
@@ -248,7 +249,7 @@ class InitiatorScreen extends React.Component {
       <View style={{ flex: 1 }}>
         <View style={styles.header}>
           {data && initiator && (
-            <Button title="Import answer" onPress={importOffer} />
+            <Button title="Import answer" onPress={() => importOffer()} />
           )}
           <ConnectionState text={connectionState} />
           <ConnectionState text={signalingState} />
