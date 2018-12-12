@@ -18,7 +18,7 @@ const WebRTCView = ({
       onChangeText={value => onChangeText(value)}
       value={value}
     />
-    <RTCView streamURL={streamURL} style={styles.video} />
+    {/* <RTCView streamURL={streamURL} style={styles.video} /> */}
   </View>
 );
 

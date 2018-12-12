@@ -18,6 +18,7 @@ const SERVER_HOST = '192.168.10.78';
 // const SERVER_HOST = '192.168.43.174';
 const clients = [];
 let InitiatorComponent;
+let chatChannel;
 
 const server = net.createServer(socket => {
   socket.setEncoding('utf8');
@@ -51,19 +52,21 @@ client.on('connect', () => {
   });
 
   getLocalStream(stream => {
-    pc.addStream(stream);
+    // pc.addStream(stream);
     InitiatorComponent.setState({ videoURL: stream.toURL() });
   });
 });
 
-client.on('data', data => {
-  InitiatorComponent.setState({
+client.on('data', async data => {
+  await InitiatorComponent.setState({
     data: data.toString()
   });
+
+  // importOffer();
 });
 
-// const configuration = { iceServers: [{ urls: [] }] };
-const pc = new RTCPeerConnection(null);
+const configuration = { iceServers: [{ urls: [] }] };
+const pc = new RTCPeerConnection(configuration);
 
 pc.oniceconnectionstatechange = () => InitiatorComponent.setConnectionState();
 pc.onsignalingstatechange = () => InitiatorComponent.setSignalingState();
@@ -86,14 +89,29 @@ pc.onicecandidate = async ({ candidate }) => {
 };
 
 function createOffer() {
+  chatChannel = pc.createDataChannel('chatChannel');
+  channel(chatChannel);
+
   pc.createOffer()
     .then(offer => pc.setLocalDescription(offer))
-    .then(async () => {
-      await InitiatorComponent.setState({
+    .then(() => {
+      InitiatorComponent.setState({
         offerCreated: true
       });
     })
     .catch(InitiatorComponent.logError);
+}
+
+function channel() {
+  chatChannel.onopen = function(e) {
+    console.log('chat channel is open', e);
+  };
+  chatChannel.onmessage = function(e) {
+    console.log(e);
+  };
+  chatChannel.onclose = function() {
+    console.log('chat channel closed');
+  };
 }
 
 function importOffer() {
@@ -162,7 +180,7 @@ class InitiatorScreen extends React.Component {
   state = initialState;
 
   componentDidMount() {
-    DeviceInfo.getIPAddress().then(ip => this.setState({ ip }));
+    DeviceInfo.getIPAddress().then(ip => console.log(ip));
 
     InitiatorComponent = this;
 
@@ -222,7 +240,6 @@ class InitiatorScreen extends React.Component {
       return createOffer();
     }
 
-    alert('state');
     return importOffer();
   }
 
@@ -286,7 +303,7 @@ class InitiatorScreen extends React.Component {
             onPress={() => this.start()}
             disabled={data === null}
             placeholder="Paste initiator offer"
-            onChangeText={value => console.log(value)}
+            onChangeText={value => this.setState({ data: value })}
             value={data}
             streamURL={receiverVideoURL}
           />
